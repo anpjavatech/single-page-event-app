@@ -1,21 +1,34 @@
-import { NavLink } from "react-router-dom"
+import { Suspense } from 'react';
+import EventsList from '../components/EventsList';
+import { defer, json, useLoaderData, Await} from "react-router-dom";
 
-const DUMMY_EVENTS = [
-    {id:1, name:"First Event"},
-    {id:2, name:"Second Event"},
-    {id:3, name:"Third Event"},
-    {id:4, name:"Fourth Event"}
-]
+function EventsPage() {
+    const {events} = useLoaderData();
 
-export default function EventsPage(){
-    return <>
-        <h1>Events Page.</h1>
-        <ul>
-            {DUMMY_EVENTS.map(eventEle => 
-                <li key={eventEle.id}>
-                    <NavLink to={`/events/${eventEle.id}`}>{eventEle.name}</NavLink>
-                </li>    
-            )}
-        </ul>
-    </>
+    return <Suspense fallback={<p style={{textAlign:"center"}}>Loading...</p>}>
+        <Await resolve={events}>
+            {(loadedEvents)=><EventsList events={loadedEvents}/>}
+        </Await>
+    </Suspense>;
 }
+
+async function loadEvents(){
+    const response = await fetch("http://localhost:8080/events");
+
+    if(!response.ok){
+        json({message:"Could not fetch the events !."}, {status:500,})
+    }else{
+        const resData = await response.json();
+        return resData.events;
+    }
+}
+
+export function loader(){
+    
+    return defer({
+        events: loadEvents()
+    });
+
+}
+
+export default EventsPage;
